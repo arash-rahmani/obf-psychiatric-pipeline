@@ -1,10 +1,15 @@
 # OBF-Psychiatric pipeline config
 data:
-  root: "data/raw"          # where the six OBF CSVs live
+  root: "data/raw"
+
+preprocessing:
+  min_days_per_participant: 7
+  excluded_features:
+    - "q25"
 
 split:
   seed: 42
-  n_folds: 5                # for GroupKFold later
+  n_folds: 5
 
 output:
   results_dir: "results"

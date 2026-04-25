@@ -1,0 +1,11 @@
+# OBF-Psychiatric pipeline config
+data:
+  root: "data/raw"          # where the six OBF CSVs live
+
+split:
+  seed: 42
+  n_folds: 5                # for GroupKFold later
+
+output:
+  results_dir: "results"
+  eda_dir: "results/eda"

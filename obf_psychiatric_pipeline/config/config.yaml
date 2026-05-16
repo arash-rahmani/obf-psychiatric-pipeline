@@ -1,6 +1,8 @@
 # OBF-Psychiatric pipeline config
+
 data:
   root: "data/raw"
+  actigraphy_root: "data/raw/actigraphy"
 
 preprocessing:
   min_days_per_participant: 7

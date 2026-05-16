@@ -14,6 +14,7 @@ class ConfigError(ValueError):
 @dataclass(frozen=True)
 class DataConfig:
     root: Path
+    actigraphy_root: Path = Path("data/raw/actigraphy")
 
 
 @dataclass(frozen=True)
@@ -56,7 +57,12 @@ def load_config(path: Path | str) -> Config:
             raise ConfigError(f"Config missing required section: '{key}'")
 
     return Config(
-        data=DataConfig(root=Path(raw["data"]["root"])),
+        data=DataConfig(
+            root=Path(raw["data"]["root"]),
+            actigraphy_root=Path(
+                raw["data"].get("actigraphy_root", "data/raw/actigraphy")
+            ),
+        ),
         preprocessing=PreprocessingConfig(
             min_days_per_participant=raw["preprocessing"]["min_days_per_participant"],
             excluded_features=raw["preprocessing"]["excluded_features"],

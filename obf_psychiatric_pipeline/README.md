@@ -1,7 +1,7 @@
 # obf-psychiatric-pipeline
 
 > Reproducible classification of psychiatric conditions from wrist-worn
-> motor activity — applying the same pipeline philosophy as my
+> motor activity, applying the same pipeline philosophy as my
 > [RNA-seq pipeline](https://github.com/arash-rahmani/rnaseq-python-pipeline)
 > to a fundamentally different data domain: from genome to behavior.
 
@@ -24,9 +24,9 @@ features, meaningfully separates depression from schizophrenia.
 **Combined features (distributional + temporal + circadian):**
 binary F1 **0.849** (0.761–0.920), 3-class F1 **0.753** (0.645–0.841).
 
-The +0.158 gain on the 3-class task is driven by temporal features —
-interdaily stability, intradaily variability, cosinor acrophase, and
-sleep metrics — that carry disorder-specific circadian signatures not
+The +0.158 gain on the 3-class task is driven by temporal features
+(interdaily stability, intradaily variability, cosinor acrophase, and
+sleep metrics) that carry disorder-specific circadian signatures not
 captured by activity volume alone. Temporal features alone outperform
 distributional features alone on 3-class (F1 0.699 vs 0.595):
 *the feature engineering choice moved the needle, not model complexity.*
@@ -79,24 +79,24 @@ This pipeline takes wrist-worn motor activity data from psychiatric
 inpatients and healthy controls, and runs an honest, reproducible
 classification analysis that respects the structure of the data:
 
-- **Dual task framing** — both 3-class (control / depression /
+- **Dual task framing:** both 3-class (control / depression /
   schizophrenia) and 2-class (control / patient). The contrast between
   the two is the finding.
-- **Dual aggregation** — both per-day and per-participant
+- **Dual aggregation:** both per-day and per-participant
   classification, with participant-level cross-validation in both cases
   to prevent within-subject leakage.
-- **Three classifiers** — stratified dummy (floor), logistic regression
+- **Three classifiers:** stratified dummy (floor), logistic regression
   (interpretable linear baseline), XGBoost (non-linear). All compared
   fairly on identical folds.
-- **Bootstrap 95% CIs on every metric** — point estimates lie when
+- **Bootstrap 95% CIs on every metric:** point estimates lie when
   n=76; intervals are honest.
-- **Temporal and circadian feature extraction** — interdaily stability
+- **Temporal and circadian feature extraction:** interdaily stability
   (IS), intradaily variability (IV), L5/M10 rest-activity windows,
   cosinor parameters (mesor, amplitude, acrophase, R²), and Cole-Kripke
   sleep metrics (TST, WASO, sleep efficiency, SOL) computed from raw
   per-minute actigraphy.
 - **SHAP-based feature attribution** on the best non-linear model.
-- **Config-driven, schema-validated, pytest-tested** — same
+- **Config-driven, schema-validated, pytest-tested:** same
   architectural philosophy as my RNA-seq pipeline.
 
 ---
@@ -121,7 +121,7 @@ Raw OBF metadata (5 cohorts) + features.csv (3 cohorts)
                  ▼
    Schema-validated loader + preprocessing
    • drop participants with < 7 recording days
-   • drop q25 (uninformative — saturates at zero)
+   • drop q25 (uninformative; saturates at zero)
                  │
                  ▼
    Join distributional + temporal on participant ID
@@ -163,10 +163,10 @@ src/obf_psychiatric_pipeline/   # importable Python package
     extract.py                  # per-participant feature orchestrator
   models/
     classifiers.py              # estimator factories
-    aggregate.py                # per-day → per-participant
-    relabel.py                  # 3-class → 2-class
+    aggregate.py                # per-day -> per-participant
+    relabel.py                  # 3-class -> 2-class
     evaluate.py                 # metrics + bootstrap CIs
-    train.py                    # 2×2×3 experiment grid
+    train.py                    # 2x2x3 experiment grid
   viz/
     eda.py                      # 5 EDA plots
     confusion.py                # confusion matrices
@@ -215,8 +215,8 @@ pytest tests/                             # 112 tests
 Exploratory PCA showed that depression and schizophrenia largely
 overlap in distributional feature space while both separate cleanly
 from controls. Reporting only the 3-class result would have hidden the
-actual structure of the data. Reporting both — and the gap between them
-— makes the finding visible. The gap narrows substantially with temporal
+actual structure of the data. Reporting both, and the gap between them,
+makes the finding visible. The gap narrows substantially with temporal
 features (+0.158 on 3-class vs +0.051 on 2-class).
 
 **Why participant-level splitting, not row-level?**
@@ -229,21 +229,21 @@ participant-level independence.
 
 **Why both per-day and per-participant aggregation?**
 Per-day uses more data (~880 samples) but day-rows from the same
-person are not independent — confidence intervals computed on per-day
+person are not independent; confidence intervals computed on per-day
 data are artificially tight. Per-participant aggregation (~76 samples)
 respects the true unit of clinical inference and gives honest CIs.
 Both are reported; the per-participant numbers are the ones to trust.
 
 **Why temporal features at participant level only?**
 IS, IV, L5/M10, cosinor, and sleep metrics are inherently multi-day
-aggregates — they characterise a participant's rhythm over the full
+aggregates that characterise a participant's rhythm over the full
 recording, not a single day. Computing them at the day level would be
 methodologically incoherent. This is also why they most directly address
 the 3-class problem: they capture rhythm structure, not daily volume.
 
 **Why logistic regression as a baseline alongside XGBoost?**
 When logreg matches XGBoost, the problem is near-linear and model
-complexity is not the path to better performance — feature engineering
+complexity is not the path to better performance; feature engineering
 is. That prediction shaped Phase 2: temporal features pushed 3-class
 F1 from 0.595 to 0.753, while XGBoost began to outperform logreg on
 the combined 2-class task (0.849 vs 0.827), indicating the richer
@@ -269,7 +269,7 @@ remains in the headline number.
 **1. Combined features substantially improve 3-class discrimination.**
 Distributional-only 3-class F1 was 0.595. Temporal features alone
 reach 0.699. Combined features reach 0.753. The CIs for distributional
-and combined do not overlap — this is a robust finding, not noise.
+and combined do not overlap. This is a robust finding, not noise.
 
 ![3-class confusion matrix (logistic regression, combined features)](results/figures/confusion_3class_combined_logreg.png)
 
@@ -289,14 +289,14 @@ level cannot.
 
 **3. Feature engineering, not model complexity, was the lever.**
 The original pipeline showed logreg matching XGBoost on distributional
-features — a sign the problem was near-linear with that feature set.
+features, a sign the problem was near-linear with that feature set.
 Adding temporal features created a richer space where XGBoost gains an
 edge on 2-class (0.849 vs 0.827), confirming the prediction: invest in
 features, not tuning.
 
 **4. One pre-computed feature carries no signal.**
 The 25th percentile of per-minute activity (`q25`) saturates at zero
-across all classes — every participant spends substantial time
+across all classes; every participant spends substantial time
 motionless during sleep, regardless of diagnosis. Excluded from
 modeling.
 
@@ -392,17 +392,17 @@ hyperactivity disorder patients*, 2024.
 
 ## About
 
-Built by [Arash Rahmani](https://github.com/arash-rahmani) — M.Sc.
+Built by [Arash Rahmani](https://github.com/arash-rahmani), M.Sc.
 Bioinformatics, Julius-Maximilians-Universität Würzburg.
 
 This is the second in a series of reproducible analysis pipelines
 spanning biological and behavioral data:
 
-- **[rnaseq-python-pipeline](https://github.com/arash-rahmani/rnaseq-python-pipeline)** — RNA-seq differential expression and pathway enrichment
-- **obf-psychiatric-pipeline** — motor-activity classification of psychiatric conditions *(this repo)*
+- **[rnaseq-python-pipeline](https://github.com/arash-rahmani/rnaseq-python-pipeline):** RNA-seq differential expression and pathway enrichment
+- **obf-psychiatric-pipeline:** motor-activity classification of psychiatric conditions *(this repo)*
 
-The same architectural principles — config-driven, schema-validated,
-pytest-tested, modular — apply across both. The data domain shifts
+The same architectural principles apply across both: config-driven,
+schema-validated, pytest-tested, modular. The data domain shifts
 from genome to mind; the rigor doesn't.
 
 [LinkedIn](https://linkedin.com/in/arash-rahmani-544684242)

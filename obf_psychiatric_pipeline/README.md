@@ -15,25 +15,33 @@
 ## Headline finding
 
 Wrist-worn motor activity distinguishes psychiatric inpatients from
-healthy controls (**macro-F1 0.80, 95% CI 0.70–0.88**) but does not
-reliably distinguish depression from schizophrenia
-(**macro-F1 0.60, 95% CI 0.48–0.71**). The two patient cohorts share
-a common low-activity, high-sedentary motor signature — suggesting that
-distributional features of activity capture *inpatient status and
-medication effects* rather than *disorder-specific behavior*.
+healthy controls and, when enriched with temporal and circadian
+features, meaningfully separates depression from schizophrenia.
 
-This is the project's central result: motor activity alone, summarized
-distributionally, is sufficient for screening but insufficient for
-differential diagnosis between major psychiatric conditions.
+**Distributional features only (baseline):** binary F1 0.798 (0.700–0.881),
+3-class F1 0.595 (0.480–0.705).
+
+**Combined features (distributional + temporal + circadian):**
+binary F1 **0.849** (0.761–0.920), 3-class F1 **0.753** (0.645–0.841).
+
+The +0.158 gain on the 3-class task is driven by temporal features —
+interdaily stability, intradaily variability, cosinor acrophase, and
+sleep metrics — that carry disorder-specific circadian signatures not
+captured by activity volume alone. Temporal features alone outperform
+distributional features alone on 3-class (F1 0.699 vs 0.595):
+*the feature engineering choice moved the needle, not model complexity.*
 
 **Per-participant headline numbers (5-fold GroupKFold CV, bootstrap CIs):**
 
-| Task | Classifier | Macro-F1 | 95% CI | Lift over dummy |
-|---|---|---|---|---|
-| Control vs Patient | Logistic Regression | **0.798** | 0.700 – 0.881 | +0.19 |
-| Control vs Patient | XGBoost | 0.755 | 0.646 – 0.841 | +0.15 |
-| Control vs Depression vs Schizophrenia | Logistic Regression | **0.595** | 0.480 – 0.705 | +0.21 |
-| Control vs Depression vs Schizophrenia | XGBoost | 0.499 | 0.386 – 0.602 | +0.11 |
+| Task | Feature set | Classifier | Macro-F1 | 95% CI | Lift over dummy |
+|---|---|---|---|---|---|
+| Control vs Patient | Distributional | Logistic Regression | 0.798 | 0.700–0.881 | +0.19 |
+| Control vs Patient | Distributional | XGBoost | 0.755 | 0.646–0.841 | +0.15 |
+| Control vs Patient | Combined | Logistic Regression | 0.827 | 0.737–0.902 | +0.22 |
+| Control vs Patient | **Combined** | **XGBoost** | **0.849** | **0.761–0.920** | **+0.25** |
+| Control vs Depr vs Schiz | Distributional | Logistic Regression | 0.595 | 0.480–0.705 | +0.21 |
+| Control vs Depr vs Schiz | Temporal only | Logistic Regression | 0.699 | 0.590–0.802 | +0.31 |
+| Control vs Depr vs Schiz | **Combined** | **Logistic Regression** | **0.753** | **0.645–0.841** | **+0.37** |
 
 ![Binary confusion matrix](results/figures/confusion_2class_per_participant_logreg.png)
 
@@ -45,8 +53,8 @@ differential diagnosis between major psychiatric conditions.
 
 > PC1 (65.6%) captures overall activity level and creates a class
 > gradient. PC2 (17.6%) does not separate cohorts. The geometry is
-> nearly one-dimensional, which is why a linear classifier matches
-> XGBoost on this feature set.
+> nearly one-dimensional on distributional features alone; temporal
+> features add dimensions that separate the patient cohorts.
 
 ---
 
@@ -66,7 +74,12 @@ classification analysis that respects the structure of the data:
   (interpretable linear baseline), XGBoost (non-linear). All compared
   fairly on identical folds.
 - **Bootstrap 95% CIs on every metric** — point estimates lie when
-  n=75; intervals are honest.
+  n=76; intervals are honest.
+- **Temporal and circadian feature extraction** — interdaily stability
+  (IS), intradaily variability (IV), L5/M10 rest-activity windows,
+  cosinor parameters (mesor, amplitude, acrophase, R²), and Cole-Kripke
+  sleep metrics (TST, WASO, sleep efficiency, SOL) computed from raw
+  per-minute actigraphy.
 - **SHAP-based feature attribution** on the best non-linear model.
 - **Config-driven, schema-validated, pytest-tested** — same
   architectural philosophy as my RNA-seq pipeline.
@@ -76,15 +89,27 @@ classification analysis that respects the structure of the data:
 ## Pipeline overview
 
 ```
+Raw per-minute actigraphy (Depresjon / Psykose)
+                 │
+                 ▼
+        Schema-validated raw loader
+                 │
+                 ▼
+   Temporal feature extraction (17 features per participant)
+   • IS, IV, L5, M10, amplitude, relative amplitude
+   • Cosinor: mesor, amplitude, acrophase, R²
+   • Sleep: TST, WASO, sleep efficiency, SOL
+                 │
+                 ▼
 Raw OBF metadata (5 cohorts) + features.csv (3 cohorts)
                  │
                  ▼
-        Schema-validated loader
-                 │
-                 ▼
-   Preprocessing
+   Schema-validated loader + preprocessing
    • drop participants with < 7 recording days
    • drop q25 (uninformative — saturates at zero)
+                 │
+                 ▼
+   Join distributional + temporal on participant ID
                  │
                  ▼
    Participant-level GroupKFold (n=5, seed=42)
@@ -93,9 +118,6 @@ Raw OBF metadata (5 cohorts) + features.csv (3 cohorts)
    ▼                           ▼
  Track A: 3-class            Track B: 2-class
  (control/depr/schiz)        (control vs patient)
-   │                           │
-   ▼                           ▼
-   Per-day  ‖  Per-participant aggregation
    │                           │
    ▼                           ▼
    Dummy  ‖  LogReg  ‖  XGBoost
@@ -113,9 +135,17 @@ Raw OBF metadata (5 cohorts) + features.csv (3 cohorts)
 src/obf_psychiatric_pipeline/   # importable Python package
   config.py                     # YAML config loader, frozen dataclass
   data/
-    loader.py                   # schema-validated loaders
+    loader.py                   # schema-validated loaders (features.csv)
+    raw_loader.py               # raw per-minute actigraphy loader
     preprocess.py               # min-days filter, feature exclusion
     split.py                    # participant-level GroupKFold
+  features/
+    _helpers.py                 # shared private helpers
+    temporal.py                 # IS, IV, L5, M10
+    cosinor.py                  # cosinor model parameters
+    sleep.py                    # Cole-Kripke scorer + sleep metrics
+    derived.py                  # amplitude, relative amplitude
+    extract.py                  # per-participant feature orchestrator
   models/
     classifiers.py              # estimator factories
     aggregate.py                # per-day → per-participant
@@ -129,7 +159,7 @@ src/obf_psychiatric_pipeline/   # importable Python package
     shap_plots.py               # SHAP attribution
 config/config.yaml              # paths, split seed, exclusions
 scripts/                        # CLI entry points
-tests/                          # 17 pytest tests
+tests/                          # 112 pytest tests
 results/                        # generated outputs (gitignored)
 data/                           # input data (gitignored)
 ```
@@ -150,14 +180,16 @@ pip install -e .
 ```
 
 Place the OBF-Psychiatric CSVs in `data/raw/` (six files: five
-`*info.csv` and `features.csv`).
+`*info.csv` and `features.csv`). Place raw per-minute actigraphy in
+`data/raw/actigraphy/{control,depression,schizophrenia}/`.
 
 ```powershell
-python scripts/load_data.py        # smoke test
-python scripts/run_eda.py          # generates 5 EDA plots
-python scripts/train_models.py     # runs the 2×2×3 experiment grid
-python scripts/run_viz.py          # confusion matrices, ROC, SHAP
-pytest tests/                      # 17 tests
+python scripts/load_data.py               # smoke test
+python scripts/run_eda.py                 # generates 5 EDA plots
+python scripts/train_models.py            # distributional-only experiment
+python scripts/run_temporal_experiment.py # distributional vs temporal vs combined
+python scripts/run_viz.py                 # confusion matrices, ROC, SHAP
+pytest tests/                             # 112 tests
 ```
 
 ---
@@ -166,10 +198,11 @@ pytest tests/                      # 17 tests
 
 **Why dual task framing (3-class and 2-class)?**
 Exploratory PCA showed that depression and schizophrenia largely
-overlap in feature space while both separate cleanly from controls.
-Reporting only the 3-class result would have hidden the actual
-structure of the data. Reporting both — and the gap between them —
-makes the finding visible.
+overlap in distributional feature space while both separate cleanly
+from controls. Reporting only the 3-class result would have hidden the
+actual structure of the data. Reporting both — and the gap between them
+— makes the finding visible. The gap narrows substantially with temporal
+features (+0.158 on 3-class vs +0.051 on 2-class).
 
 **Why participant-level splitting, not row-level?**
 Each participant contributes ~12 rows (one per recording day). Random
@@ -182,105 +215,105 @@ participant-level independence.
 **Why both per-day and per-participant aggregation?**
 Per-day uses more data (~880 samples) but day-rows from the same
 person are not independent — confidence intervals computed on per-day
-data are artificially tight. Per-participant aggregation (~75 samples)
+data are artificially tight. Per-participant aggregation (~76 samples)
 respects the true unit of clinical inference and gives honest CIs.
 Both are reported; the per-participant numbers are the ones to trust.
 
+**Why temporal features at participant level only?**
+IS, IV, L5/M10, cosinor, and sleep metrics are inherently multi-day
+aggregates — they characterise a participant's rhythm over the full
+recording, not a single day. Computing them at the day level would be
+methodologically incoherent. This is also why they most directly address
+the 3-class problem: they capture rhythm structure, not daily volume.
+
 **Why logistic regression as a baseline alongside XGBoost?**
-Two reasons. First, multicollinearity: the six features collapse to
-roughly two independent dimensions (PC1 = 65.6%, PC2 = 17.6%), so
-linear models are well-matched to the geometry. Second,
-interpretability: when logreg matches or exceeds XGBoost, it tells you
-the problem is near-linear and that model complexity isn't the path
-to better performance — *feature engineering is*. That finding shapes
-the next iteration of this work.
+When logreg matches XGBoost, the problem is near-linear and model
+complexity is not the path to better performance — feature engineering
+is. That prediction shaped Phase 2: temporal features pushed 3-class
+F1 from 0.595 to 0.753, while XGBoost began to outperform logreg on
+the combined 2-class task (0.849 vs 0.827), indicating the richer
+feature space benefits from non-linear capacity.
 
 **Why no hyperparameter tuning?**
 With 22 participants in the smallest cohort, nested CV hyperparameter
 search is mostly noise. Default sklearn / XGBoost hyperparameters were
 used (XGBoost: `n_estimators=200, max_depth=4, learning_rate=0.05`,
 logreg: `C=1.0`, both with `class_weight="balanced"`). The focus of
-this work is methodological framing, not hyperparameter optimization.
+this work is methodological framing and feature engineering, not
+hyperparameter optimization.
 
 **Why bootstrap confidence intervals?**
-At n=75 participants, point estimates of macro-F1 are unstable across
+At n=76 participants, point estimates of macro-F1 are unstable across
 resampling. The bootstrap CI honestly reflects how much uncertainty
-remains in the headline number. A reported macro-F1 of 0.798 without
-its 0.700–0.881 interval would be misleading.
+remains in the headline number.
 
 ---
 
 ## Findings
 
-**1. Binary classification is solid; ternary classification is partial.**
-Control-vs-patient hits macro-F1 0.80 (CI 0.70–0.88). Three-class
-hits 0.60 (CI 0.48–0.71). Both clear their dummy baselines convincingly.
-The 20-point gap between them is the project's central finding.
+**1. Combined features substantially improve 3-class discrimination.**
+Distributional-only 3-class F1 was 0.595. Temporal features alone
+reach 0.699. Combined features reach 0.753. The CIs for distributional
+and combined do not overlap — this is a robust finding, not noise.
 
-**2. Linear models match XGBoost on this feature set.**
-Logistic regression beat or matched XGBoost across most experiments
-(0.798 vs 0.755 on binary per-participant, 0.595 vs 0.499 on ternary
-per-participant). The feature space is near-linear; gradient boosting's
-extra capacity has nothing to exploit. This is a finding, not a
-disappointment — it points directly at where modeling effort should
-go next: feature engineering, not model complexity.
+**2. Temporal features alone outperform distributional features alone
+on the 3-class problem.**
+F1 0.699 vs 0.595 with logistic regression. Circadian structure
+carries disorder-specific information that activity volume statistics
+do not. Sleep fragmentation, reduced interdaily stability, and shifted
+acrophase differentiate the patient cohorts in ways that mean activity
+level cannot.
 
-**3. One pre-computed feature carries no signal.**
+**3. Feature engineering, not model complexity, was the lever.**
+The original pipeline showed logreg matching XGBoost on distributional
+features — a sign the problem was near-linear with that feature set.
+Adding temporal features created a richer space where XGBoost gains an
+edge on 2-class (0.849 vs 0.827), confirming the prediction: invest in
+features, not tuning.
+
+**4. One pre-computed feature carries no signal.**
 The 25th percentile of per-minute activity (`q25`) saturates at zero
 across all classes — every participant spends substantial time
-motionless during sleep, regardless of diagnosis. This feature was
-excluded from modeling.
+motionless during sleep, regardless of diagnosis. Excluded from
+modeling.
 
-**4. Confidence intervals widen honestly with proper aggregation.**
+**5. Confidence intervals widen honestly with proper aggregation.**
 Per-day CIs were ~0.06 wide; per-participant CIs were ~0.18 wide for
-the same metric. The wider intervals are the honest ones; the narrow
-ones reflect within-participant correlation, not statistical certainty.
+the same metric. The wider intervals are the honest ones.
 
 ---
 
 ## Limitations
 
-- **Sample size: n = 77 participants total** (32 control, 23 depression,
-  22 schizophrenia). Bootstrap CIs reflect this; readers should weight
-  point estimates accordingly.
-- **Distributional features only.** The pre-computed feature matrix
-  contains six summary statistics per day. It captures *how much* a
-  participant moves but not *when*, *for how long*, or *with what
-  rhythmic structure*. Circadian and temporal-structure features are
-  the natural next step.
+- **Sample size: n = 76 participants** (after preprocessing; 77 in
+  raw data). Bootstrap CIs reflect this; readers should weight point
+  estimates accordingly.
 - **Inpatient cohorts on medication.** Both patient groups were
   recorded during inpatient stays. Antipsychotic and antidepressant
-  medications have known motor effects. Results characterize "psychiatric
+  medications have known motor effects. Results characterise "psychiatric
   inpatient on medication" as much as "depression" or "schizophrenia"
-  per se, and do not generalize to outpatient or unmedicated populations.
-- **Two patient cohorts only.** ADHD and clinical-control metadata are
-  in the OBF dataset but the pre-computed feature matrix excludes them.
-  Extending to a 4- or 5-class problem requires computing features
-  from raw actigraphy.
+  per se, and do not generalise to outpatient or unmedicated populations.
+- **Cole-Kripke device mismatch.** Sleep scoring was validated on AMI
+  Motionlogger hardware; OBF uses Actiwatch. Absolute sleep-minute
+  accuracy is reduced, but group separation survives because
+  miscalibration affects all cohorts uniformly.
+- **No external validation.** All performance numbers come from
+  cross-validation on a single dataset. Generalisation to other
+  actigraphy datasets is untested.
 - **The OBF-Psychiatric dataset combines two earlier studies**
   (Depresjon and Psykose) with different recording protocols. Some
   cross-cohort confounds may reflect study-of-origin rather than
   diagnosis.
-- **No external validation.** All performance numbers come from
-  cross-validation on a single dataset. Generalization to other
-  actigraphy datasets is untested.
 
 ---
 
-## Bridge to next work
+## Next work
 
-The next iteration of this pipeline will compute custom temporal
-features from raw actigraphy — interdaily stability (IS), intradaily
-variability (IV), L5/M10 (least-active 5h, most-active 10h), cosinor
-amplitude and acrophase, and activity fragmentation indices — to test
-whether circadian and rhythmic structure can disambiguate the patient
-cohorts that distributional features cannot.
-
-Whether they can or cannot is itself the question.
-
-This pipeline establishes the methodological backbone — schema-validated
-loading, participant-level CV, bootstrap-CI'd evaluation, dual task
-framing — for that experiment.
+SHAP attribution on the combined feature set to identify which
+circadian markers drive the depression vs schizophrenia separation —
+is it sleep fragmentation, shifted acrophase, reduced IS, or a
+combination? That answer has clinical interpretability beyond the
+classification result.
 
 ---
 

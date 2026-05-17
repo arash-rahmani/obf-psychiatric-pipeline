@@ -31,6 +31,18 @@ captured by activity volume alone. Temporal features alone outperform
 distributional features alone on 3-class (F1 0.699 vs 0.595):
 *the feature engineering choice moved the needle, not model complexity.*
 
+![Circadian activity profiles by cohort](results/figures/circadian_activity_profiles.png)
+
+> Mean 24-hour activity profiles for controls, depression, and schizophrenia.
+> Both patient cohorts show attenuated amplitude and a flattened rhythm
+> relative to controls; the depression cohort shows a visually delayed
+> acrophase that the schizophrenia cohort does not.
+
+> Profiles use all 77 raw actigraphy participants; one participant excluded
+> from classification for fewer than 7 recording days. Depression and
+> schizophrenia cohorts derive from separate source studies (Depresjon and
+> Psykose) with different recording protocols.
+
 **Per-participant headline numbers (5-fold GroupKFold CV, bootstrap CIs):**
 
 | Task | Feature set | Classifier | Macro-F1 | 95% CI | Lift over dummy |
@@ -43,11 +55,14 @@ distributional features alone on 3-class (F1 0.699 vs 0.595):
 | Control vs Depr vs Schiz | Temporal only | Logistic Regression | 0.699 | 0.590–0.802 | +0.31 |
 | Control vs Depr vs Schiz | **Combined** | **Logistic Regression** | **0.753** | **0.645–0.841** | **+0.37** |
 
-![Binary confusion matrix](results/figures/confusion_2class_per_participant_logreg.png)
+![Temporal feature performance comparison](results/figures/temporal_performance_comparison.png)
 
-> The binary classifier confuses control with patient cases primarily
-> at the activity-level boundary — low-activity controls and
-> higher-functioning patients overlap.
+> Distributional, temporal-only, and combined feature sets compared
+> across both tasks. The 3-class gain from distributional to combined
+> (+0.158) is the headline result; the binary gain (+0.051) is real but
+> smaller. Circadian structure is disorder-specific, not merely
+> patient-specific. The CIs for distributional and combined 3-class do
+> not overlap.
 
 ![PCA projection](results/eda/pca_projection.png)
 
@@ -256,6 +271,14 @@ Distributional-only 3-class F1 was 0.595. Temporal features alone
 reach 0.699. Combined features reach 0.753. The CIs for distributional
 and combined do not overlap — this is a robust finding, not noise.
 
+![3-class confusion matrix (logistic regression, combined features)](results/figures/confusion_3class_combined_logreg.png)
+
+> The 3-class classifier separates controls from both patient cohorts
+> with reasonable reliability. Depression and schizophrenia still
+> confuse each other in both directions; the residual overlap is
+> the honest upper bound of what combined features can resolve at
+> this sample size.
+
 **2. Temporal features alone outperform distributional features alone
 on the 3-class problem.**
 F1 0.699 vs 0.595 with logistic regression. Circadian structure
@@ -280,6 +303,42 @@ modeling.
 **5. Confidence intervals widen honestly with proper aggregation.**
 Per-day CIs were ~0.06 wide; per-participant CIs were ~0.18 wide for
 the same metric. The wider intervals are the honest ones.
+
+### Mechanistic interpretation
+
+SHAP attribution on the combined-feature XGBoost model (n=76, full
+dataset) identifies which features drive each classification decision
+and in which direction. Three results stand out.
+
+**Depression.** Cosinor acrophase is the dominant feature. Low acrophase
+values carry strongly negative SHAP for the depression class: a delayed
+activity peak is the primary signal pushing a participant toward a
+depression prediction. L5 onset ranks second, independently flagging
+delayed sleep onset as corroborating evidence. Together, these two
+features recover the textbook delayed circadian phase finding in MDD
+from actigraphy alone, without any clinical annotation.
+
+**Schizophrenia.** Activity standard deviation dominates: low SD pushes
+strongly toward schizophrenia, consistent with antipsychotic motor
+suppression flattening the behavioral repertoire. Cosinor acrophase
+enters in the opposite direction from depression: an earlier activity
+peak predicts schizophrenia rather than depression. This confirms
+that the two disorders carry distinct circadian signatures even when
+their gross activity levels overlap.
+
+**Binary (control vs patient).** Percentage of zeros (sedentary time),
+intradaily variability, and interdaily stability lead the ranking.
+Temporal features place alongside distributional ones, confirming that
+circadian structure contributes independent signal beyond overall
+activity level.
+
+![SHAP summary: 3-class XGBoost, depression](results/figures/shap_summary_combined_3class_depression.png)
+
+![SHAP summary: 3-class XGBoost, schizophrenia](results/figures/shap_summary_combined_3class_schizophrenia.png)
+
+> SHAP attributions computed by training XGBoost on full dataset (n=76)
+> for interpretability purposes only. Classification performance metrics
+> derive from held-out 5-fold GroupKFold cross-validation.
 
 ---
 
@@ -309,11 +368,15 @@ the same metric. The wider intervals are the honest ones.
 
 ## Next work
 
-SHAP attribution on the combined feature set to identify which
-circadian markers drive the depression vs schizophrenia separation —
-is it sleep fragmentation, shifted acrophase, reduced IS, or a
-combination? That answer has clinical interpretability beyond the
-classification result.
+This pipeline is the basis for a paper in preparation, targeting
+*npj Digital Medicine*. The analysis reported here is complete.
+
+The methodological backbone established here covers schema-validated
+loading, participant-level CV, bootstrap-CI'd evaluation, dual task
+framing, and SHAP attribution. It transfers directly to the open
+question this work cannot yet answer: whether these findings replicate
+on independent actigraphy datasets collected outside the
+OBF-Psychiatric cohort. External validation is the natural next step.
 
 ---
 

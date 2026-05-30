@@ -46,5 +46,6 @@ def make_xgb(seed: int = 42, n_classes: int = 3) -> XGBClassifier:
         use_label_encoder=False,
         eval_metric="mlogloss" if n_classes > 2 else "logloss",
         random_state=seed,
+        nthread=1,
         verbosity=0,
     )

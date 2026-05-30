@@ -18,7 +18,7 @@ FEATURE_COLS = ["mean", "sd", "pctZeros", "median", "q75"]
 
 
 def main() -> None:
-    cfg = load_config(Path("config/config.yaml"))
+    cfg = load_config(Path(__file__).parent.parent / "config" / "config.yaml")
     metadata, features = load_all(cfg.data.root)
     _, features = preprocess(metadata, features, cfg)
 

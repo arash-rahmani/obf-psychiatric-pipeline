@@ -7,7 +7,7 @@ from obf_psychiatric_pipeline.viz.eda import run_eda
 
 
 def main() -> None:
-    cfg = load_config(Path("config/config.yaml"))
+    cfg = load_config(Path(__file__).parent.parent / "config" / "config.yaml")
     metadata, features = load_all(cfg.data.root)
     run_eda(metadata, features, Path(cfg.output.eda_dir))
     print(f"EDA plots written to {cfg.output.eda_dir}")

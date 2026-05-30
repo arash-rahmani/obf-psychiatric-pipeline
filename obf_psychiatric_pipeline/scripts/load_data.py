@@ -6,7 +6,7 @@ from obf_psychiatric_pipeline.data.loader import load_all
 
 
 def main() -> None:
-    cfg = load_config(Path("config/config.yaml"))
+    cfg = load_config(Path(__file__).parent.parent / "config" / "config.yaml")
     metadata, features = load_all(cfg.data.root)
 
     print("=== Metadata cohorts ===")

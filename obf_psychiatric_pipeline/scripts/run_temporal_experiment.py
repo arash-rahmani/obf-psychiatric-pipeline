@@ -51,7 +51,7 @@ TEMPORAL_FEATURES = list(FEATURE_NAMES)
 # Combined: distributional + temporal.
 COMBINED_FEATURES = DIST_FEATURES + TEMPORAL_FEATURES
 
-CONFIG_PATH = Path("config/config.yaml")
+CONFIG_PATH = Path(__file__).parent.parent / "config" / "config.yaml"
 OUT_DIR = Path("results/temporal_experiment")
 
 

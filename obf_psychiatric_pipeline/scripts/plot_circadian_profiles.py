@@ -26,7 +26,7 @@ from scipy.ndimage import uniform_filter1d
 from obf_psychiatric_pipeline.config import load_config
 from obf_psychiatric_pipeline.data.raw_loader import load_all_actigraphy
 
-CONFIG_PATH = Path("config/config.yaml")
+CONFIG_PATH = Path(__file__).parent.parent / "config" / "config.yaml"
 OUT_DIR = Path("results/figures")
 
 COHORT_STYLE = {

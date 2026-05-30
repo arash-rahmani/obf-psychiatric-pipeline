@@ -36,7 +36,7 @@ from obf_psychiatric_pipeline.models.aggregate import to_participant_level
 from obf_psychiatric_pipeline.models.classifiers import make_xgb
 from obf_psychiatric_pipeline.models.relabel import to_binary
 
-CONFIG_PATH = Path("config/config.yaml")
+CONFIG_PATH = Path(__file__).parent.parent / "config" / "config.yaml"
 OUT_DIR = Path("results/figures")
 
 DIST_FEATURES = ["mean", "sd", "pctZeros", "median", "q75"]

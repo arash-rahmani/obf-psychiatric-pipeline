@@ -36,11 +36,18 @@ class OutputConfig:
 
 
 @dataclass(frozen=True)
+class CvConfig:
+    n_splits: int = 5
+    n_reps: int = 20
+    fixture_dir: Path = Path("config/folds_repeated")
+
+@dataclass(frozen=True)
 class Config:
     data: DataConfig
     preprocessing: PreprocessingConfig
     split: SplitConfig
     output: OutputConfig
+    cv: CvConfig = CvConfig()
 
 
 def load_config(path: Path | str) -> Config:
@@ -56,7 +63,14 @@ def load_config(path: Path | str) -> Config:
         if key not in raw:
             raise ConfigError(f"Config missing required section: '{key}'")
 
+    cv_raw = raw.get("cv", {})
+    cv_cfg = CvConfig(
+        n_splits=cv_raw.get("n_splits", 5),
+        n_reps=cv_raw.get("n_reps", 20),
+        fixture_dir=Path(cv_raw.get("fixture_dir", "config/folds_repeated")),
+    )
     return Config(
+        cv=cv_cfg,
         data=DataConfig(
             root=Path(raw["data"]["root"]),
             actigraphy_root=Path(

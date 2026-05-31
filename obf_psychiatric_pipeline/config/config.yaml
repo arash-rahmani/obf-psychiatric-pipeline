@@ -16,3 +16,7 @@ split:
 output:
   results_dir: "results"
   eda_dir: "results/eda"
+cv:
+  n_splits: 5
+  n_reps: 20
+  fixture_dir: config/folds_repeated

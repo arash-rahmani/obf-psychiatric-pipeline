@@ -31,7 +31,7 @@ from obf_psychiatric_pipeline.config import load_config
 from obf_psychiatric_pipeline.data.loader import load_all
 from obf_psychiatric_pipeline.data.preprocess import preprocess
 from obf_psychiatric_pipeline.data.raw_loader import load_all_actigraphy
-from obf_psychiatric_pipeline.data.split import make_splits
+from obf_psychiatric_pipeline.data.split import make_splits, load_splits_from_fixture
 from obf_psychiatric_pipeline.features.extract import FEATURE_NAMES, extract_all_features
 from obf_psychiatric_pipeline.models.aggregate import to_participant_level
 from obf_psychiatric_pipeline.models.classifiers import make_dummy, make_logreg, make_xgb
@@ -209,9 +209,11 @@ def main() -> None:
             ("3class", fs_df),
             ("2class", to_binary(fs_df.copy())),
         ]:
-            splits = make_splits(
-                task_df, n_folds=cfg.split.n_folds, seed=cfg.split.seed
-            )
+            _fixture_map = {
+                76: CONFIG_PATH.parent / "folds_76.json",
+                77: CONFIG_PATH.parent / "folds_77.json",
+            }
+            splits = load_splits_from_fixture(task_df, _fixture_map[len(fs_df)])
             n_classes = len(task_df["class"].unique())
             classifiers = {
                 "dummy":  make_dummy(cfg.split.seed),

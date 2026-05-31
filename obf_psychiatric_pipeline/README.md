@@ -18,18 +18,35 @@ Wrist-worn motor activity distinguishes psychiatric inpatients from
 healthy controls and, when enriched with temporal and circadian
 features, meaningfully separates depression from schizophrenia.
 
-**Distributional features only (baseline):** binary F1 0.798 (0.700–0.881),
-3-class F1 0.595 (0.480–0.705).
+**Distributional features only (baseline):** binary F1 0.768 (0.758–0.778),
+3-class F1 0.582 (0.571–0.593).
 
 **Combined features (distributional + temporal + circadian):**
-binary F1 **0.849** (0.761–0.920), 3-class F1 **0.753** (0.645–0.841).
+binary F1 **0.808** (0.798–0.818), 3-class F1 **0.691** (0.678–0.704).
 
-The +0.158 gain on the 3-class task is driven by temporal features
+All figures are means across 20 repeated 5-fold CV runs (seeds 0–19,
+fold assignments committed in `config/folds_repeated/folds_n5_r20.json`);
+intervals are 95% t-intervals on the mean across repetitions, measuring
+fold-assignment stability. Bootstrap CIs quantifying sample-size
+uncertainty at n=76 are reported in the Results section below.
+
+The paired difference for the 3-class task (combined minus distributional)
+is **+0.109** (95% CI [0.097–0.121]), positive in **20 of 20** repetitions.
+Pairing within the same fold assignments cancels shared fold and sample
+variance; 20/20 is the primary evidence for the feature engineering claim.
+
+The +0.109 gain on the 3-class task is driven by temporal features
 (interdaily stability, intradaily variability, cosinor acrophase, and
 sleep metrics) that carry disorder-specific circadian signatures not
 captured by activity volume alone. Temporal features alone outperform
-distributional features alone on 3-class (F1 0.699 vs 0.595):
+distributional features alone on 3-class (F1 0.644 vs 0.582, 19/20 reps):
 *the feature engineering choice moved the needle, not model complexity.*
+
+The binary and 3-class results dissociate. On 2-class, temporal features
+alone (0.760) perform no better than distributional (0.768), positive in
+only 8 of 20 repetitions. On 3-class, temporal alone (0.644) outperforms
+distributional (0.582) in 19 of 20 repetitions. Activity volume separates
+patients from controls. Circadian timing separates disorders from each other.
 
 ![Circadian activity profiles by cohort](results/figures/circadian_activity_profiles.png)
 
@@ -43,26 +60,31 @@ distributional features alone on 3-class (F1 0.699 vs 0.595):
 > schizophrenia cohorts derive from separate source studies (Depresjon and
 > Psykose) with different recording protocols.
 
-**Per-participant headline numbers (5-fold GroupKFold CV, bootstrap CIs):**
+**Per-participant results (20-rep repeated 5-fold CV, logistic regression):**
 
-| Task | Feature set | Classifier | Macro-F1 | 95% CI | Lift over dummy |
-|---|---|---|---|---|---|
-| Control vs Patient | Distributional | Logistic Regression | 0.798 | 0.700–0.881 | +0.19 |
-| Control vs Patient | Distributional | XGBoost | 0.755 | 0.646–0.841 | +0.15 |
-| Control vs Patient | Combined | Logistic Regression | 0.827 | 0.737–0.902 | +0.22 |
-| Control vs Patient | **Combined** | **XGBoost** | **0.849** | **0.761–0.920** | **+0.25** |
-| Control vs Depr vs Schiz | Distributional | Logistic Regression | 0.595 | 0.480–0.705 | +0.21 |
-| Control vs Depr vs Schiz | Temporal only | Logistic Regression | 0.699 | 0.590–0.802 | +0.31 |
-| Control vs Depr vs Schiz | **Combined** | **Logistic Regression** | **0.753** | **0.645–0.841** | **+0.37** |
+| Task | Feature set | Mean F1 | 95% CI (rep) | Reps positive |
+|---|---|---|---|---|
+| Control vs Patient | Distributional | 0.768 | 0.758–0.778 | ref |
+| Control vs Patient | **Combined** | **0.808** | **0.798–0.818** | 18/20 |
+| Control vs Depr vs Schiz | Distributional | 0.582 | 0.571–0.593 | ref |
+| Control vs Depr vs Schiz | Temporal only | 0.644 | 0.627–0.661 | 19/20 |
+| Control vs Depr vs Schiz | **Combined** | **0.691** | **0.678–0.704** | 20/20 |
+
+95% CI: t-interval on the mean across 20 repetitions (fold-assignment
+stability; not sample-size uncertainty, which is characterised by
+bootstrap CIs in the Results section). Reps positive: fraction of 20
+paired repetitions in which the feature set outperformed distributional.
 
 ![Temporal feature performance comparison](results/figures/temporal_performance_comparison.png)
 
 > Distributional, temporal-only, and combined feature sets compared
-> across both tasks. The 3-class gain from distributional to combined
-> (+0.158) is the headline result; the binary gain (+0.051) is real but
-> smaller. Circadian structure is disorder-specific, not merely
-> patient-specific. The CIs for distributional and combined 3-class do
-> not overlap.
+> across both tasks (20-rep repeated CV means; error bars are 95%
+> t-intervals on the mean across repetitions). The 3-class gain from
+> distributional to combined (+0.109, 20/20 reps) is the headline result;
+> the binary gain (+0.040, 18/20 reps) is real but smaller. On the binary
+> task, temporal features alone match distributional; on the 3-class task,
+> temporal alone outperforms distributional. Circadian structure is
+> disorder-specific, not patient-specific.
 
 ![PCA projection](results/eda/pca_projection.png)
 
@@ -154,6 +176,9 @@ src/obf_psychiatric_pipeline/   # importable Python package
     raw_loader.py               # raw per-minute actigraphy loader
     preprocess.py               # min-days filter, feature exclusion
     split.py                    # participant-level GroupKFold
+  cv/
+    folds.py                    # committed fold fixture generation and I/O
+    runner.py                   # repeated CV evaluation and statistics
   features/
     _helpers.py                 # shared private helpers
     temporal.py                 # IS, IV, L5, M10
@@ -204,7 +229,9 @@ python scripts/run_eda.py                 # generates 5 EDA plots
 python scripts/train_models.py            # distributional-only experiment
 python scripts/run_temporal_experiment.py # distributional vs temporal vs combined
 python scripts/run_viz.py                 # confusion matrices, ROC, SHAP
-pytest tests/                             # 112 tests
+python scripts/generate_fold_fixtures.py  # committed fold assignments
+python scripts/run_repeated_cv.py         # canonical 20-rep results
+pytest tests/                             # 160 tests
 ```
 
 ---
@@ -217,7 +244,7 @@ overlap in distributional feature space while both separate cleanly
 from controls. Reporting only the 3-class result would have hidden the
 actual structure of the data. Reporting both, and the gap between them,
 makes the finding visible. The gap narrows substantially with temporal
-features (+0.158 on 3-class vs +0.051 on 2-class).
+features (+0.109 on 3-class vs +0.040 on 2-class, 20-rep repeated CV).
 
 **Why participant-level splitting, not row-level?**
 Each participant contributes ~12 rows (one per recording day). Random
@@ -241,13 +268,15 @@ recording, not a single day. Computing them at the day level would be
 methodologically incoherent. This is also why they most directly address
 the 3-class problem: they capture rhythm structure, not daily volume.
 
-**Why logistic regression as a baseline alongside XGBoost?**
+**Why logistic regression as the primary classifier?**
 When logreg matches XGBoost, the problem is near-linear and model
 complexity is not the path to better performance; feature engineering
 is. That prediction shaped Phase 2: temporal features pushed 3-class
-F1 from 0.595 to 0.753, while XGBoost began to outperform logreg on
-the combined 2-class task (0.849 vs 0.827), indicating the richer
-feature space benefits from non-linear capacity.
+F1 from 0.582 to 0.691 (logreg, 20-rep repeated CV). XGBoost was
+evaluated in the single-split Phase 3 experiment and shows gains on
+the combined 2-class task, consistent with the richer feature space
+benefiting from non-linear capacity; the repeated-CV headline uses
+logreg only, which is the more conservative and reproducible claim.
 
 **Why no hyperparameter tuning?**
 With 22 participants in the smallest cohort, nested CV hyperparameter
@@ -267,9 +296,12 @@ remains in the headline number.
 ## Findings
 
 **1. Combined features substantially improve 3-class discrimination.**
-Distributional-only 3-class F1 was 0.595. Temporal features alone
-reach 0.699. Combined features reach 0.753. The CIs for distributional
-and combined do not overlap. This is a robust finding, not noise.
+Distributional-only 3-class F1 was 0.582 (20-rep mean). Temporal
+features alone reach 0.644. Combined features reach 0.691. The paired
+difference (combined minus distributional) is +0.109 (95% CI
+[0.097–0.121]), positive in 20 of 20 repetitions. The paired comparison
+cancels shared fold variance; unanimity across repetitions is the
+robust evidence, not point-estimate magnitude.
 
 ![3-class confusion matrix (logistic regression, combined features)](results/figures/confusion_3class_combined_logreg.png)
 
@@ -277,30 +309,42 @@ and combined do not overlap. This is a robust finding, not noise.
 > with reasonable reliability. Depression and schizophrenia still
 > confuse each other in both directions; the residual overlap is
 > the honest upper bound of what combined features can resolve at
-> this sample size.
+> this sample size. Shown for one representative fold (repetition 0,
+> fold 0 of committed fixture `folds_n5_r20.json`); pattern is
+> consistent across folds.
 
 **2. Temporal features alone outperform distributional features alone
 on the 3-class problem.**
-F1 0.699 vs 0.595 with logistic regression. Circadian structure
-carries disorder-specific information that activity volume statistics
-do not. Sleep fragmentation, reduced interdaily stability, and shifted
-acrophase differentiate the patient cohorts in ways that mean activity
-level cannot.
+F1 0.644 vs 0.582 (19/20 reps positive) with logistic regression.
+Circadian structure carries disorder-specific information that activity
+volume statistics do not. Sleep fragmentation, reduced interdaily
+stability, and shifted acrophase differentiate the patient cohorts in
+ways that mean activity level cannot.
 
 **3. Feature engineering, not model complexity, was the lever.**
-The original pipeline showed logreg matching XGBoost on distributional
-features, a sign the problem was near-linear with that feature set.
-Adding temporal features created a richer space where XGBoost gains an
-edge on 2-class (0.849 vs 0.827), confirming the prediction: invest in
-features, not tuning.
+Logistic regression on distributional features was already near-linear;
+adding temporal features pushed 3-class F1 from 0.582 to 0.691 with the
+same classifier. The lever was the feature set, not the model. This is
+also visible in the dissociation: temporal features help specifically
+where the problem is disorder discrimination, and not where it is
+illness detection.
 
-**4. One pre-computed feature carries no signal.**
+**4. The binary and 3-class tasks dissociate on temporal features.**
+On 2-class (control vs patient), temporal features alone (0.760)
+perform no better than distributional features (0.768), positive in
+only 8 of 20 repetitions. On 3-class, temporal alone (0.644) outperforms
+distributional (0.582) in 19 of 20 repetitions. Activity volume separates
+patients from controls. Circadian timing separates disorders from each
+other. This dissociation is mechanistically coherent with the acrophase
+finding: timing is disorder-specific signal, not patient-specific signal.
+
+**5. One pre-computed feature carries no signal.**
 The 25th percentile of per-minute activity (`q25`) saturates at zero
 across all classes; every participant spends substantial time
 motionless during sleep, regardless of diagnosis. Excluded from
 modeling.
 
-**5. Confidence intervals widen honestly with proper aggregation.**
+**6. Confidence intervals widen honestly with proper aggregation.**
 Per-day CIs were ~0.06 wide; per-participant CIs were ~0.18 wide for
 the same metric. The wider intervals are the honest ones.
 
@@ -371,12 +415,18 @@ activity level.
 This pipeline is the basis for a paper in preparation, targeting
 *npj Digital Medicine*. The analysis reported here is complete.
 
+The canonical numbers (0.691 / 0.644 / 0.582 on 3-class, 0.808 / 0.768
+on 2-class, paired difference +0.109 [0.097–0.121] at 20/20) derive from
+20-rep repeated 5-fold CV with committed fold fixtures. They are the
+numbers for the draft.
+
 The methodological backbone established here covers schema-validated
 loading, participant-level CV, bootstrap-CI'd evaluation, dual task
-framing, and SHAP attribution. It transfers directly to the open
-question this work cannot yet answer: whether these findings replicate
-on independent actigraphy datasets collected outside the
-OBF-Psychiatric cohort. External validation is the natural next step.
+framing, repeated CV with committed fixtures, and SHAP attribution. It
+transfers directly to the open question this work cannot yet answer:
+whether these findings replicate on independent actigraphy datasets
+collected outside the OBF-Psychiatric cohort. External validation is
+the natural next step.
 
 ---
 

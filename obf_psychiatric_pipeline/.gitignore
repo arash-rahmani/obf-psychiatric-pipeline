@@ -1,6 +1,6 @@
 
 /data/
-results/
+/results/
 .venv/
 *.egg-info/
 __pycache__/

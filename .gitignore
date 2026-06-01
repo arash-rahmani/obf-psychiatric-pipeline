@@ -1,12 +1,14 @@
-.vscode/
-data/
-results/
-src/
-tests/
-patch_readme.py
-requirements_obf.txt
-.pytest_cache/
+# Python
 __pycache__/
 *.pyc
+*.egg-info/
 .venv/
 venv/
+
+# Tooling
+.pytest_cache/
+.vscode/
+
+# Data and generated outputs (regenerate from code)
+data/
+results/

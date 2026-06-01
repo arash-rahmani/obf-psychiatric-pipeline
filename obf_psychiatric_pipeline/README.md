@@ -5,10 +5,10 @@
 > [RNA-seq pipeline](https://github.com/arash-rahmani/rnaseq-python-pipeline)
 > to a fundamentally different data domain: from genome to behavior.
 
-**Language:** Python 3.10+ &nbsp;|&nbsp;
+**Language:** Python 3.11 &nbsp;|&nbsp;
 **Dataset:** OBF-Psychiatric (Garcia-Ceja et al., 2024) &nbsp;|&nbsp;
-**Models:** logistic regression, XGBoost, dummy baseline &nbsp;|&nbsp;
-**Tests:** pytest
+**Models:** logistic regression (primary), XGBoost (SHAP), dummy baseline &nbsp;|&nbsp;
+**Tests:** 160 passing (pytest)
 
 ---
 
@@ -48,7 +48,7 @@ only 8 of 20 repetitions. On 3-class, temporal alone (0.644) outperforms
 distributional (0.582) in 19 of 20 repetitions. Activity volume separates
 patients from controls. Circadian timing separates disorders from each other.
 
-![Circadian activity profiles by cohort](results/figures/circadian_activity_profiles.png)
+![Circadian activity profiles by cohort](figures/circadian_activity_profiles.png)
 
 > Mean 24-hour activity profiles for controls, depression, and schizophrenia.
 > Both patient cohorts show attenuated amplitude and a flattened rhythm
@@ -75,7 +75,7 @@ stability; not sample-size uncertainty, which is characterised by
 bootstrap CIs in the Results section). Reps positive: fraction of 20
 paired repetitions in which the feature set outperformed distributional.
 
-![Temporal feature performance comparison](results/figures/temporal_performance_comparison.png)
+![Temporal feature performance comparison](figures/temporal_performance_comparison.png)
 
 > Distributional, temporal-only, and combined feature sets compared
 > across both tasks (20-rep repeated CV means; error bars are 95%
@@ -86,7 +86,7 @@ paired repetitions in which the feature set outperformed distributional.
 > temporal alone outperforms distributional. Circadian structure is
 > disorder-specific, not patient-specific.
 
-![PCA projection](results/eda/pca_projection.png)
+![PCA projection](figures/pca_projection.png)
 
 > PC1 (65.6%) captures overall activity level and creates a class
 > gradient. PC2 (17.6%) does not separate cohorts. The geometry is
@@ -108,8 +108,8 @@ classification analysis that respects the structure of the data:
   classification, with participant-level cross-validation in both cases
   to prevent within-subject leakage.
 - **Three classifiers:** stratified dummy (floor), logistic regression
-  (interpretable linear baseline), XGBoost (non-linear). All compared
-  fairly on identical folds.
+  (interpretable linear baseline, primary), XGBoost (non-linear, used
+  for SHAP interpretability). All compared fairly on identical folds.
 - **Bootstrap 95% CIs on every metric:** point estimates lie when
   n=76; intervals are honest.
 - **Temporal and circadian feature extraction:** interdaily stability
@@ -117,7 +117,7 @@ classification analysis that respects the structure of the data:
   cosinor parameters (mesor, amplitude, acrophase, R²), and Cole-Kripke
   sleep metrics (TST, WASO, sleep efficiency, SOL) computed from raw
   per-minute actigraphy.
-- **SHAP-based feature attribution** on the best non-linear model.
+- **SHAP-based feature attribution** on the non-linear model.
 - **Config-driven, schema-validated, pytest-tested:** same
   architectural philosophy as my RNA-seq pipeline.
 
@@ -149,7 +149,8 @@ Raw OBF metadata (5 cohorts) + features.csv (3 cohorts)
    Join distributional + temporal on participant ID
                  │
                  ▼
-   Participant-level GroupKFold (n=5, seed=42)
+   Participant-level repeated 5-fold CV
+   (20 repetitions, committed fold fixtures, seeds 0–19)
                  │
    ┌─────────────┴─────────────┐
    ▼                           ▼
@@ -157,11 +158,11 @@ Raw OBF metadata (5 cohorts) + features.csv (3 cohorts)
  (control/depr/schiz)        (control vs patient)
    │                           │
    ▼                           ▼
-   Dummy  ‖  LogReg  ‖  XGBoost
+   Dummy (floor) ‖ LogReg (primary) ‖ XGBoost (SHAP only)
    │                           │
    ▼                           ▼
    Macro-F1, per-class metrics, confusion matrices,
-   ROC curves, SHAP attribution, bootstrap 95% CIs
+   SHAP attribution, rep-stability + bootstrap 95% CIs
 ```
 
 ---
@@ -175,7 +176,7 @@ src/obf_psychiatric_pipeline/   # importable Python package
     loader.py                   # schema-validated loaders (features.csv)
     raw_loader.py               # raw per-minute actigraphy loader
     preprocess.py               # min-days filter, feature exclusion
-    split.py                    # participant-level GroupKFold
+    split.py                    # participant-level GroupKFold (per-day flow)
   cv/
     folds.py                    # committed fold fixture generation and I/O
     runner.py                   # repeated CV evaluation and statistics
@@ -191,16 +192,16 @@ src/obf_psychiatric_pipeline/   # importable Python package
     aggregate.py                # per-day -> per-participant
     relabel.py                  # 3-class -> 2-class
     evaluate.py                 # metrics + bootstrap CIs
-    train.py                    # 2x2x3 experiment grid
+    train.py                    # experiment grid
   viz/
-    eda.py                      # 5 EDA plots
-    confusion.py                # confusion matrices
-    roc.py                      # ROC curves
-    shap_plots.py               # SHAP attribution
-config/config.yaml              # paths, split seed, exclusions
-scripts/                        # CLI entry points
-tests/                          # 112 pytest tests
-results/                        # generated outputs (gitignored)
+    eda.py                      # EDA plots
+config/
+  config.yaml                   # paths, split seed, exclusions
+  folds_repeated/               # committed 20-rep fold fixtures
+scripts/                        # CLI entry points (see Quickstart)
+tests/                          # 160 pytest tests
+figures/                        # committed canonical figures
+results/                        # generated scratch outputs (gitignored)
 data/                           # input data (gitignored)
 ```
 
@@ -208,13 +209,14 @@ data/                           # input data (gitignored)
 
 ## Quickstart
 
-**Requirements:** Python 3.10+, Windows (PowerShell) or Linux
+**Requirements:** Python 3.11 (tested on Linux and Windows)
 
-```powershell
+```bash
 git clone https://github.com/arash-rahmani/obf-psychiatric-pipeline
 cd obf-psychiatric-pipeline
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+source .venv/bin/activate          # Linux/macOS
+# .\.venv\Scripts\Activate.ps1     # Windows PowerShell
 pip install -U pip
 pip install -e .
 ```
@@ -223,16 +225,23 @@ Place the OBF-Psychiatric CSVs in `data/raw/` (six files: five
 `*info.csv` and `features.csv`). Place raw per-minute actigraphy in
 `data/raw/actigraphy/{control,depression,schizophrenia}/`.
 
-```powershell
-python scripts/load_data.py               # smoke test
-python scripts/run_eda.py                 # generates 5 EDA plots
-python scripts/train_models.py            # distributional-only experiment
-python scripts/run_temporal_experiment.py # distributional vs temporal vs combined
-python scripts/run_viz.py                 # confusion matrices, ROC, SHAP
-python scripts/generate_fold_fixtures.py  # committed fold assignments
-python scripts/run_repeated_cv.py         # canonical 20-rep results
-pytest tests/                             # 160 tests
+```bash
+python scripts/load_data.py                    # smoke test: load and validate
+python scripts/run_eda.py                       # EDA plots (scratch -> results/eda)
+python scripts/generate_fold_fixtures.py        # write committed 20-rep fold fixtures
+python scripts/run_repeated_cv.py               # canonical 20-rep repeated CV results
+python scripts/plot_repeated_cv_comparison.py   # performance comparison figure
+python scripts/plot_confusion_from_fixture.py   # 3-class confusion matrix
+python scripts/plot_shap_combined.py            # SHAP attribution figures
+python scripts/plot_circadian_profiles.py       # circadian activity profiles
+pytest                                          # 160 passed, 6 skipped
 ```
+
+The headline numbers reproduce on any platform because the fold
+assignments are committed fixtures (`config/folds_repeated/folds_n5_r20.json`),
+not generated at runtime. Plot scripts write into `results/figures/`
+(scratch, gitignored); the curated figures committed in `figures/` are
+the canonical versions referenced above and in the manuscript.
 
 ---
 
@@ -251,8 +260,8 @@ Each participant contributes ~12 rows (one per recording day). Random
 row-level splitting puts the same participant in both train and test,
 which inflates measured performance via subject-identity leakage. This
 is the most common methodological error in actigraphy-based
-classification literature. `GroupKFold(groups=user)` enforces
-participant-level independence.
+classification literature. Participant-level folds enforce that no
+participant appears in both train and test of any fold.
 
 **Why both per-day and per-participant aggregation?**
 Per-day uses more data (~880 samples) but day-rows from the same
@@ -272,11 +281,11 @@ the 3-class problem: they capture rhythm structure, not daily volume.
 When logreg matches XGBoost, the problem is near-linear and model
 complexity is not the path to better performance; feature engineering
 is. That prediction shaped Phase 2: temporal features pushed 3-class
-F1 from 0.582 to 0.691 (logreg, 20-rep repeated CV). XGBoost was
-evaluated in the single-split Phase 3 experiment and shows gains on
-the combined 2-class task, consistent with the richer feature space
-benefiting from non-linear capacity; the repeated-CV headline uses
-logreg only, which is the more conservative and reproducible claim.
+F1 from 0.582 to 0.691 (logreg, 20-rep repeated CV). XGBoost is retained
+only for SHAP-based interpretability and does not enter the performance
+headline; its cross-platform floating-point behaviour is not
+deterministic, so the repeated-CV performance claim uses logistic
+regression exclusively, the more conservative and reproducible choice.
 
 **Why no hyperparameter tuning?**
 With 22 participants in the smallest cohort, nested CV hyperparameter
@@ -303,7 +312,7 @@ difference (combined minus distributional) is +0.109 (95% CI
 cancels shared fold variance; unanimity across repetitions is the
 robust evidence, not point-estimate magnitude.
 
-![3-class confusion matrix (logistic regression, combined features)](results/figures/confusion_3class_combined_logreg.png)
+![3-class confusion matrix (logistic regression, combined features)](figures/confusion_3class_combined_logreg.png)
 
 > The 3-class classifier separates controls from both patient cohorts
 > with reasonable reliability. Depression and schizophrenia still
@@ -376,13 +385,15 @@ Temporal features place alongside distributional ones, confirming that
 circadian structure contributes independent signal beyond overall
 activity level.
 
-![SHAP summary: 3-class XGBoost, depression](results/figures/shap_summary_combined_3class_depression.png)
+![SHAP summary: binary XGBoost (control vs patient)](figures/shap_summary_combined_binary.png)
 
-![SHAP summary: 3-class XGBoost, schizophrenia](results/figures/shap_summary_combined_3class_schizophrenia.png)
+![SHAP summary: 3-class XGBoost, depression](figures/shap_summary_combined_3class_depression.png)
+
+![SHAP summary: 3-class XGBoost, schizophrenia](figures/shap_summary_combined_3class_schizophrenia.png)
 
 > SHAP attributions computed by training XGBoost on full dataset (n=76)
 > for interpretability purposes only. Classification performance metrics
-> derive from held-out 5-fold GroupKFold cross-validation.
+> derive from held-out 20-repetition 5-fold cross-validation.
 
 ---
 

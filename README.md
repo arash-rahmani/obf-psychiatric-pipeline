@@ -35,6 +35,10 @@ is **+0.109** (95% CI [0.097–0.121]), positive in **20 of 20** repetitions.
 Pairing within the same fold assignments cancels shared fold and sample
 variance; 20/20 is the primary evidence for the feature engineering claim.
 
+Combined features also clear the stratified dummy (chance) floor in all
+20 of 20 repetitions: paired gain over the dummy is +0.325 on binary
+(95% CI 0.308–0.343) and +0.425 on 3-class (95% CI 0.407–0.443).
+
 The +0.109 gain on the 3-class task is driven by temporal features
 (interdaily stability, intradaily variability, cosinor acrophase, and
 sleep metrics) that carry disorder-specific circadian signatures not
@@ -64,8 +68,10 @@ patients from controls. Circadian timing separates disorders from each other.
 
 | Task | Feature set | Mean F1 | 95% CI (rep) | Reps positive |
 |---|---|---|---|---|
+| Control vs Patient | Chance (stratified dummy) | 0.483 | 0.470–0.496 | — |
 | Control vs Patient | Distributional | 0.768 | 0.758–0.778 | ref |
 | Control vs Patient | **Combined** | **0.808** | **0.798–0.818** | 18/20 |
+| Control vs Depr vs Schiz | Chance (stratified dummy) | 0.266 | 0.250–0.281 | — |
 | Control vs Depr vs Schiz | Distributional | 0.582 | 0.571–0.593 | ref |
 | Control vs Depr vs Schiz | Temporal only | 0.644 | 0.627–0.661 | 19/20 |
 | Control vs Depr vs Schiz | **Combined** | **0.691** | **0.678–0.704** | 20/20 |
@@ -74,6 +80,9 @@ patients from controls. Circadian timing separates disorders from each other.
 stability; not sample-size uncertainty, which is characterised by
 bootstrap CIs in the Results section). Reps positive: fraction of 20
 paired repetitions in which the feature set outperformed distributional.
+Chance row (—): combined-vs-dummy paired margins are +0.325 (binary,
+95% CI 0.308–0.343) and +0.425 (3-class, 95% CI 0.407–0.443),
+each in 20 of 20 repetitions.
 
 ![Temporal feature performance comparison](figures/temporal_performance_comparison.png)
 
@@ -427,7 +436,8 @@ This pipeline is the basis for a paper in preparation, targeting
 *npj Digital Medicine*. The analysis reported here is complete.
 
 The canonical numbers (0.691 / 0.644 / 0.582 on 3-class, 0.808 / 0.768
-on 2-class, paired difference +0.109 [0.097–0.121] at 20/20) derive from
+on 2-class, paired difference +0.109 [0.097–0.121] at 20/20; stratified
+dummy floor 0.266 / 0.483) derive from
 20-rep repeated 5-fold CV with committed fold fixtures. They are the
 numbers for the draft.
 

@@ -42,6 +42,7 @@ from obf_psychiatric_pipeline.data.loader import load_all
 from obf_psychiatric_pipeline.data.raw_loader import load_all_actigraphy
 from obf_psychiatric_pipeline.features.extract import extract_all_features
 from obf_psychiatric_pipeline.models.aggregate import to_participant_level
+from obf_psychiatric_pipeline.models.classifiers import make_dummy
 from obf_psychiatric_pipeline.data.preprocess import preprocess
 
 DIST_FEATURES = ["mean", "sd", "pctZeros", "median", "q75"]
@@ -128,26 +129,29 @@ def run_experiment(cfg, folds: dict, output_dir: Path) -> None:
     y2 = _binary_labels(y3, le)
 
     estimator = _make_logreg()
+    dummy     = make_dummy(seed=0)
     n_reps   = folds["metadata"]["n_reps"]
     n_splits = folds["metadata"]["n_splits"]
-    print(f"[3/5] Running {n_reps} x {n_splits}-fold CV (6 conditions)...")
+    print(f"[3/5] Running {n_reps} x {n_splits}-fold CV (8 conditions)...")
 
     conditions = [
-        ("3class", "distributional", X_dist, y3),
-        ("3class", "temporal",       X_temp, y3),
-        ("3class", "combined",       X_comb, y3),
-        ("2class", "distributional", X_dist, y2),
-        ("2class", "temporal",       X_temp, y2),
-        ("2class", "combined",       X_comb, y2),
+        ("3class", "distributional", X_dist, y3, estimator),
+        ("3class", "temporal",       X_temp, y3, estimator),
+        ("3class", "combined",       X_comb, y3, estimator),
+        ("2class", "distributional", X_dist, y2, estimator),
+        ("2class", "temporal",       X_temp, y2, estimator),
+        ("2class", "combined",       X_comb, y2, estimator),
+        ("3class", "dummy",          X_dist, y3, dummy),
+        ("2class", "dummy",          X_dist, y2, dummy),
     ]
 
     all_summaries: dict[str, dict] = {}
     raw_records: list[dict] = []
 
-    for task, feat_set, X, y in conditions:
+    for task, feat_set, X, y, est in conditions:
         label = f"{task}/{feat_set}"
         print(f"      {label}...", end=" ", flush=True)
-        fold_scores = evaluate_repeated(X, y, ids, folds, estimator)
+        fold_scores = evaluate_repeated(X, y, ids, folds, est)
         rep_scores  = fold_scores.mean(axis=1)
         all_summaries[label] = summarize_reps(rep_scores, label)
         all_summaries[label]["_fold_scores"] = fold_scores
@@ -166,6 +170,8 @@ def run_experiment(cfg, folds: dict, output_dir: Path) -> None:
         ("3class/distributional", "3class/combined", "3class: combined vs dist"),
         ("2class/distributional", "2class/combined", "2class: combined vs dist"),
         ("3class/distributional", "3class/temporal", "3class: temporal vs dist"),
+        ("3class/dummy",          "3class/combined", "3class: combined vs dummy"),
+        ("2class/dummy",          "2class/combined", "2class: combined vs dummy"),
     ]
     summary_df, paired_df = build_results_tables(all_summaries, paired_specs)
 

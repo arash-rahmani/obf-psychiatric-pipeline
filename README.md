@@ -27,8 +27,8 @@ binary F1 **0.808** (0.798–0.818), 3-class F1 **0.691** (0.678–0.704).
 All figures are means across 20 repeated 5-fold CV runs (seeds 0–19,
 fold assignments committed in `config/folds_repeated/folds_n5_r20.json`);
 intervals are 95% t-intervals on the mean across repetitions, measuring
-fold-assignment stability. Bootstrap CIs quantifying sample-size
-uncertainty at n=76 are reported in the Results section below.
+fold-assignment stability. A participant-level bootstrap quantifying
+sample-size uncertainty at n=76 is a planned addition, not currently computed.
 
 The paired difference for the 3-class task (combined minus distributional)
 is **+0.109** (95% CI [0.097–0.121]), positive in **20 of 20** repetitions.
@@ -77,8 +77,8 @@ patients from controls. Circadian timing separates disorders from each other.
 | Control vs Depr vs Schiz | **Combined** | **0.691** | **0.678–0.704** | 20/20 |
 
 95% CI: t-interval on the mean across 20 repetitions (fold-assignment
-stability; not sample-size uncertainty, which is characterised by
-bootstrap CIs in the Results section). Reps positive: fraction of 20
+stability; not sample-size uncertainty, which a participant-level
+bootstrap would characterise but which is not currently computed). Reps positive: fraction of 20
 paired repetitions in which the feature set outperformed distributional.
 Chance row (—): combined-vs-dummy paired margins are +0.325 (binary,
 95% CI 0.308–0.343) and +0.425 (3-class, 95% CI 0.407–0.443),
@@ -119,13 +119,17 @@ classification analysis that respects the structure of the data:
 - **Three classifiers:** stratified dummy (floor), logistic regression
   (interpretable linear baseline, primary), XGBoost (non-linear, used
   for SHAP interpretability). All compared fairly on identical folds.
-- **Bootstrap 95% CIs on every metric:** point estimates lie when
-  n=76; intervals are honest.
+- **Rep-stability 95% t-intervals on every metric:** intervals are
+  t-intervals on the across-repetition mean, measuring fold-assignment
+  stability. A participant-level bootstrap for sample-size uncertainty is
+  planned, not yet computed.
 - **Temporal and circadian feature extraction:** interdaily stability
   (IS), intradaily variability (IV), L5/M10 rest-activity windows,
-  cosinor parameters (mesor, amplitude, acrophase, R²), and Cole-Kripke
-  sleep metrics (TST, WASO, sleep efficiency, SOL) computed from raw
-  per-minute actigraphy.
+  cosinor parameters (mesor, amplitude, acrophase, R²), and five sleep
+  metrics (TST, 24-h TST, WASO, sleep efficiency, SOL) computed from raw
+  per-minute actigraphy. Sleep scoring uses Cole-Kripke with Webster
+  rescue rules over a per-night rest window detected from L5 onset, with
+  Sadeh run in parallel as a sensitivity check.
 - **SHAP-based feature attribution** on the non-linear model.
 - **Config-driven, schema-validated, pytest-tested:** same
   architectural philosophy as my RNA-seq pipeline.
@@ -142,9 +146,9 @@ Raw per-minute actigraphy (Depresjon / Psykose)
                  │
                  ▼
    Temporal feature extraction (17 features per participant)
-   • IS, IV, L5, M10, amplitude, relative amplitude
+   • IS, IV, L5 (value + onset), M10 (value + onset), amplitude, relative amplitude
    • Cosinor: mesor, amplitude, acrophase, R²
-   • Sleep: TST, WASO, sleep efficiency, SOL
+   • Sleep (5): TST, 24-h TST, WASO, sleep efficiency, SOL
                  │
                  ▼
 Raw OBF metadata (5 cohorts) + features.csv (3 cohorts)
@@ -171,7 +175,7 @@ Raw OBF metadata (5 cohorts) + features.csv (3 cohorts)
    │                           │
    ▼                           ▼
    Macro-F1, per-class metrics, confusion matrices,
-   SHAP attribution, rep-stability + bootstrap 95% CIs
+   SHAP attribution, rep-stability 95% t-intervals
 ```
 
 ---
@@ -200,7 +204,7 @@ src/obf_psychiatric_pipeline/   # importable Python package
     classifiers.py              # estimator factories
     aggregate.py                # per-day -> per-participant
     relabel.py                  # 3-class -> 2-class
-    evaluate.py                 # metrics + bootstrap CIs
+    evaluate.py                 # metrics; single-split bootstrap helper (not used in canonical run)
     train.py                    # experiment grid
   viz/
     eda.py                      # EDA plots
@@ -299,15 +303,18 @@ regression exclusively, the more conservative and reproducible choice.
 **Why no hyperparameter tuning?**
 With 22 participants in the smallest cohort, nested CV hyperparameter
 search is mostly noise. Default sklearn / XGBoost hyperparameters were
-used (XGBoost: `n_estimators=200, max_depth=4, learning_rate=0.05`,
-logreg: `C=1.0`, both with `class_weight="balanced"`). The focus of
+used (XGBoost: `n_estimators=200, max_depth=4, learning_rate=0.05,
+subsample=0.8, colsample_bytree=0.8`, no class weighting; logreg:
+`C=1.0, class_weight="balanced"`). The focus of
 this work is methodological framing and feature engineering, not
 hyperparameter optimization.
 
-**Why bootstrap confidence intervals?**
-At n=76 participants, point estimates of macro-F1 are unstable across
-resampling. The bootstrap CI honestly reflects how much uncertainty
-remains in the headline number.
+**Why rep-stability t-intervals?**
+At n=76 participants, a single fold split can over- or under-state
+macro-F1. Repeating the 5-fold CV 20 times and taking t-intervals on the
+across-repetition mean quantifies how much the result moves with the fold
+assignment. A participant-level bootstrap, which would instead quantify
+sample-size uncertainty, is a planned addition and is not currently computed.
 
 ---
 
@@ -409,8 +416,9 @@ activity level.
 ## Limitations
 
 - **Sample size: n = 76 participants** (after preprocessing; 77 in
-  raw data). Bootstrap CIs reflect this; readers should weight point
-  estimates accordingly.
+  raw data). Reported t-intervals capture fold-assignment stability, not
+  sample-size uncertainty; readers should weight point estimates
+  accordingly. A participant-level bootstrap is planned, not yet computed.
 - **Inpatient cohorts on medication.** Both patient groups were
   recorded during inpatient stays. Antipsychotic and antidepressant
   medications have known motor effects. Results characterise "psychiatric
@@ -442,7 +450,8 @@ dummy floor 0.266 / 0.483) derive from
 numbers for the draft.
 
 The methodological backbone established here covers schema-validated
-loading, participant-level CV, bootstrap-CI'd evaluation, dual task
+loading, participant-level CV, repeated-CV evaluation with rep-stability
+intervals, dual task
 framing, repeated CV with committed fixtures, and SHAP attribution. It
 transfers directly to the open question this work cannot yet answer:
 whether these findings replicate on independent actigraphy datasets

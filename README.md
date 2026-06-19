@@ -384,8 +384,11 @@ values carry strongly negative SHAP for the depression class: a delayed
 activity peak is the primary signal pushing a participant toward a
 depression prediction. L5 onset ranks second, independently flagging
 delayed sleep onset as corroborating evidence. Together, these two
-features recover the textbook delayed circadian phase finding in MDD
-from actigraphy alone, without any clinical annotation.
+features recover a delayed circadian phase signal in depression
+from actigraphy alone, without any clinical annotation. The depression
+delay is the more variable of the two disorder effects (range 8:22–17:10
+after R² filtering); the schizophrenia advance is the tighter, more
+consistent finding in these data.
 
 **Schizophrenia.** Activity standard deviation dominates: low SD pushes
 strongly toward schizophrenia, consistent with antipsychotic motor

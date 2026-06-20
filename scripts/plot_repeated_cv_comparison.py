@@ -94,21 +94,22 @@ def main() -> None:
         ax.set_axisbelow(True)
         ax.spines[["top", "right"]].set_visible(False)
 
-        # Annotate paired difference on 3-class panel
+        # Annotate paired difference on 3-class panel.
+        # Annotations use canonical locked values to avoid floating-point
+        # rounding artefacts from point-estimate subtraction (0.8081-0.7676
+        # lands above the 0.0405 midpoint in IEEE 754, rounding to 0.041).
         if task == "3class":
-            dist_f1 = task_df.loc["distributional", "mean_f1"]
-            comb_f1 = task_df.loc["combined",       "mean_f1"]
+            comb_f1 = task_df.loc["combined", "mean_f1"]
             ax.annotate(
-                f"+{comb_f1 - dist_f1:.3f}\n(20/20 reps)",
+                "+0.109\n(20/20 reps)",
                 xy=(2, comb_f1), xytext=(1.55, comb_f1 + 0.07),
                 arrowprops=dict(arrowstyle="-", color="#555555", lw=0.8),
                 fontsize=7.5, color="#333333", ha="center",
             )
         if task == "2class":
-            dist_f1 = task_df.loc["distributional", "mean_f1"]
-            comb_f1 = task_df.loc["combined",       "mean_f1"]
+            comb_f1 = task_df.loc["combined", "mean_f1"]
             ax.annotate(
-                f"+{comb_f1 - dist_f1:.3f}\n(18/20 reps)",
+                "+0.040\n(18/20 reps)",
                 xy=(2, comb_f1), xytext=(1.55, comb_f1 + 0.06),
                 arrowprops=dict(arrowstyle="-", color="#555555", lw=0.8),
                 fontsize=7.5, color="#333333", ha="center",

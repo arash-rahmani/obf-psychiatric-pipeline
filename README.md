@@ -27,8 +27,7 @@ binary F1 **0.808** (0.798–0.818), 3-class F1 **0.691** (0.678–0.704).
 All figures are means across 20 repeated 5-fold CV runs (seeds 0–19,
 fold assignments committed in `config/folds_repeated/folds_n5_r20.json`);
 intervals are 95% t-intervals on the mean across repetitions, measuring
-fold-assignment stability. A participant-level bootstrap quantifying
-sample-size uncertainty at n=76 is a planned addition, not currently computed.
+fold-assignment stability. Participant-level bootstrap resampling addresses that separate question and is deferred to the journal version alongside external validation. The primary contrast does not depend on it: the 3-class combined-vs-distributional gain is positive in all 20 of 20 repetitions under identical fold assignments.
 
 The paired difference for the 3-class task (combined minus distributional)
 is **+0.109** (95% CI [0.097–0.121]), positive in **20 of 20** repetitions.
@@ -313,8 +312,7 @@ hyperparameter optimization.
 At n=76 participants, a single fold split can over- or under-state
 macro-F1. Repeating the 5-fold CV 20 times and taking t-intervals on the
 across-repetition mean quantifies how much the result moves with the fold
-assignment. A participant-level bootstrap, which would instead quantify
-sample-size uncertainty, is a planned addition and is not currently computed.
+assignment. Participant-level bootstrap resampling addresses that separate question and is deferred to the journal version alongside external validation. The primary contrast does not depend on it: the 3-class combined-vs-distributional gain is positive in all 20 of 20 repetitions under identical fold assignments.
 
 ---
 

@@ -6,7 +6,7 @@
 > to a fundamentally different data domain: from genome to behavior.
 
 **Language:** Python 3.11 &nbsp;|&nbsp;
-**Dataset:** OBF-Psychiatric (Garcia-Ceja et al., 2024) &nbsp;|&nbsp;
+**Dataset:** OBF-Psychiatric (Garcia-Ceja et al., 2025) &nbsp;|&nbsp;
 **Models:** logistic regression (primary), XGBoost (SHAP), dummy baseline &nbsp;|&nbsp;
 **Tests:** 160 passing (pytest)
 

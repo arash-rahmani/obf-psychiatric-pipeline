@@ -1,5 +1,9 @@
 """
 Split module — participant-level cross-validation splits.
+LEGACY: This module was used in the original single-split pipeline and is
+NOT part of the canonical repeated-CV run (scripts/run_repeated_cv.py).
+The canonical pipeline uses committed KFold fixtures via cv/folds.py.
+This file is retained for reference only.
 
 Design contract:
     - One pure function: make_splits(features, n_folds, seed) -> list of (train_idx, test_idx)

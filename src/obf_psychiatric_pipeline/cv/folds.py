@@ -1,5 +1,5 @@
 """
-Committed fold fixtures for repeated GroupKFold cross-validation.
+Committed fold fixtures for repeated KFold cross-validation.
 
 Fixtures are generated once (on Linux, via generate_fold_fixtures.py) and
 committed to config/folds_repeated/. At experiment time the fixture is loaded

@@ -1,5 +1,5 @@
 """
-Generate and commit fold fixtures for repeated GroupKFold CV.
+Generate and commit fold fixtures for repeated KFold CV.
 
 Run ONCE on Linux before the experiment. The resulting JSON is committed to
 version control so fold assignments are identical on all platforms.

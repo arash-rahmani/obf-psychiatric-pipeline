@@ -1,20 +1,17 @@
 """
-Repeated GroupKFold evaluation and summary statistics.
+Repeated KFold evaluation and summary statistics.
 
-The two CIs produced here are conceptually distinct and must NOT be conflated:
+The CI produced here quantifies fold-assignment stability only:
 
   fold_ci  (from evaluate_repeated)
-      95% CI on mean macro-F1 across 20 fold assignments.
+      95% t-interval on mean macro-F1 across 20 repetitions (df = n_reps - 1).
       Answers: how stable is performance across random splits of the same data?
-      Width driven by fold-assignment variance, not sample-size uncertainty.
+      Width driven by fold-assignment variance, not cohort sampling uncertainty.
 
-  bootstrap_ci  (from models.evaluate, existing pipeline)
-      95% CI on the macro-F1 point estimate given n=76 participants.
-      Answers: how uncertain is this estimate due to finite sample size?
-      Width driven by the small n; wider is more honest.
-
-Both belong in the paper. The fold_ci replaces the single-split result as the
-headline number; the bootstrap_ci still characterises sample-size uncertainty.
+This is NOT a participant-level confidence interval. models/evaluate.py
+contains bootstrap_ci(), which resamples (y_true, y_pred) prediction pairs
+on a single held-out split -- a single-split helper, not the participant-level
+bootstrap deferred to the journal version alongside external validation.
 """
 
 from __future__ import annotations

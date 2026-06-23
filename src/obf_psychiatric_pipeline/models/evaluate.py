@@ -4,7 +4,8 @@ Evaluation module — all metrics for the OBF classification experiments.
 Design contract:
     - One function per metric.
     - evaluate_predictions() runs all metrics and returns a structured dict.
-    - bootstrap_ci() resamples predictions 1000x to produce 95% CI on macro-F1.
+    - bootstrap_ci() resamples (y_true, y_pred) prediction pairs on a single split
+      (single-split helper; NOT the participant-level bootstrap deferred to the journal version).
     - No I/O here — caller handles saving.
 """
 

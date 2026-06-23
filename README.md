@@ -188,7 +188,7 @@ src/obf_psychiatric_pipeline/   # importable Python package
     loader.py                   # schema-validated loaders (features.csv)
     raw_loader.py               # raw per-minute actigraphy loader
     preprocess.py               # min-days filter, feature exclusion
-    split.py                    # participant-level GroupKFold (per-day flow)
+    split.py                    # participant-level GroupKFold (legacy single-split path; not used in canonical run)
   cv/
     folds.py                    # committed fold fixture generation and I/O
     runner.py                   # repeated CV evaluation and statistics

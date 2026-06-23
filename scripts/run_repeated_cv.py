@@ -1,5 +1,5 @@
 """
-Repeated GroupKFold CV experiment: distributional vs temporal vs combined.
+Repeated KFold CV experiment: distributional vs temporal vs combined.
 
 20-rep x 5-fold CV, logistic regression only, two tasks (3-class, 2-class).
 

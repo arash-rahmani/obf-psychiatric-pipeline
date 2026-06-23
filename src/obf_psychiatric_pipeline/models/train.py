@@ -1,3 +1,11 @@
+"""
+Training module — single-split experiment runner.
+
+LEGACY: This module was used in the original single-split pipeline and is
+NOT part of the canonical repeated-CV run (scripts/run_repeated_cv.py).
+The canonical pipeline uses scripts/run_repeated_cv.py with committed
+KFold fixtures. This file is retained for reference only.
+"""
 from __future__ import annotations
 
 import json

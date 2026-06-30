@@ -127,8 +127,10 @@ classification analysis that respects the structure of the data:
   cosinor parameters (mesor, amplitude, acrophase, R²), and five sleep
   metrics (TST, 24-h TST, WASO, sleep efficiency, SOL) computed from raw
   per-minute actigraphy. Sleep scoring uses Cole-Kripke with Webster
-  rescue rules over a per-night rest window detected from L5 onset, with
-  Sadeh run in parallel as a sensitivity check.
+  rescue rules over a per-night rest window detected from L5 onset. An
+  alternative Sadeh-based scorer is implemented and unit-tested but has
+  not been run as a participant-level sensitivity comparison; that
+  comparison is a direct extension for the journal version.
 - **SHAP-based feature attribution** on the non-linear model.
 - **Config-driven, schema-validated, pytest-tested:** same
   architectural philosophy as my RNA-seq pipeline.
